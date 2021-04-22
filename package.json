@@ -707,6 +707,7 @@
   },
   "dependencies": {
     "date-fns": "^2.16.1",
+    "diff2html": "^3.4.3",
     "jsonc-parser": "^3.0.0"
   }
 }
