@@ -2,51 +2,54 @@
 
 ## What changed
 
-Two source files modified, one test file modified, no new files created.
+| File | Change |
+|---|---|
+| `src/utils/deltaWiring.ts` | Implement `collectHunkViews`, `groupDecorationsByStyle`, `applyDeltaDecorations`; add `refreshDeltaDecorations` lifecycle manager and `registerDeltaDecorationListener` for content-change events |
+| `src/utils/viewUtils.ts` | Call `refreshDeltaDecorations(uri)` after `showTextDocument` for initial render |
+| `src/extension.ts` | Register `onDidChangeTextDocument` listener via `registerDeltaDecorationListener()` |
+| `src/test/suite/deltaWiring.test.ts` | Add tests for fold-aware collection, fold exclusion, and full pipeline integration |
 
-### `src/utils/deltaWiring.ts`
+## Bugs found and fixed
 
-Replaced stubs with three implementations:
+### Bug 1: Decorations on wrong lines (folded views)
 
-- **`collectHunkViews(view)`** — walks the view tree collecting `HunkView`
-  instances, **respecting fold state**. Uses a custom `walkVisible()` traversal
-  that skips children of folded views. This is critical because `render()` sets
-  `_range` on all subviews even inside folded parents, but those ranges don't
-  correspond to actual document lines — applying decorations at those positions
-  would color the wrong lines (e.g. filenames in the listing instead of diff
-  content).
-- **`groupDecorationsByStyle(decorations)`** — groups `DecorationRange[]` by
-  `(foreground, background)` key, dropping colorless entries.
-- **`applyDeltaDecorations(editor, view)`** — orchestrator composing the above
-  with `getDocumentDeltaDecorations` to create VS Code decoration types and
-  apply them.
+`collectHunkViews` used `walkAllSubViews()` which ignores fold state.
+`ChangeView` has `foldedByDefault = true`. When folded, `render()` still sets
+`_range` on child HunkViews as if expanded, but the fold-aware `range` getter
+makes the parent occupy only 1 line. Result: HunkView ranges pointed into the
+file listing area, causing decorations on filenames.
 
-### `src/utils/viewUtils.ts`
+**Fix:** Replaced `walkAllSubViews()` with `walkVisible()` that skips children
+of folded views.
 
-Wired `applyDeltaDecorations` into `ViewUtils.showView()`:
+### Bug 2: Decorations never applied (wrong trigger point)
 
-- Module-level `activeDecorations` map for decoration lifecycle management.
-- Fire-and-forget call after `showTextDocument` with error logging.
+`applyDeltaDecorations` was only called in `showView`, which runs once when the
+document is first created. At that point, `ChangeView`s are folded by default →
+`collectHunkViews` returns `[]` → no decorations. When the user later unfolds a
+ChangeView, the content provider re-renders but decorations were never
+re-applied.
 
-### `src/test/suite/deltaWiring.test.ts`
+**Fix:** Two trigger points:
+1. `showView` calls `refreshDeltaDecorations(uri)` after showing the editor
+   (handles initial render for views like `SectionDiffView` where hunks are
+   unfolded from the start).
+2. `workspace.onDidChangeTextDocument` listener calls
+   `refreshDeltaDecorations(uri)` whenever a magit document's content changes
+   (handles fold toggles, status refreshes, and any other re-render).
 
-- Updated existing test to explicitly unfold ChangeViews before asserting
-  HunkView collection (ChangeView.foldedByDefault = true).
-- Added test verifying folded ChangeViews yield zero HunkViews.
-
-## Bug found and fixed
-
-The original plan's `collectHunkViews` used `walkAllSubViews()` which ignores
-fold state. `ChangeView` has `foldedByDefault = true`. When folded, `render()`
-still assigns `_range` to child HunkViews as if expanded, but the parent's
-fold-aware `range` getter returns a single-line range. The parent's `render()`
-advances `currentLineNumber` by only 1, so subsequent views get correct line
-numbers — but the HunkViews inside the folded ChangeView have stale/wrong
-ranges pointing into the file listing area. Decorations landed on filenames
-instead of diff content.
+The `refreshDeltaDecorations` function centralizes the lifecycle: finds the
+editor and view, disposes previous decoration types, and applies new ones.
 
 ## Verification
 
 ```
-$ make test   # 17 passing (192ms)
+$ make test   # 18 passing (210ms)
 ```
+
+Tests cover:
+- `collectHunkViews` finds hunks in unfolded ChangeViews
+- `collectHunkViews` excludes hunks inside folded ChangeViews
+- Full pipeline (collect → delta → group) produces non-empty decoration groups
+  with ranges within hunk bounds
+- `groupDecorationsByStyle` groups correctly by (foreground, background)
