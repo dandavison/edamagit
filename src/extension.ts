@@ -58,6 +58,7 @@ import { copyBufferRevisionCommands } from './commands/copyBufferRevisionCommand
 import { submodules } from './commands/submodulesCommands';
 import { forgeRefreshInterval } from './forge';
 import { bisecting } from './commands/bisectCommands';
+import { registerDeltaDecorationListener } from './utils/deltaWiring';
 
 export const magitRepositories: Map<string, MagitRepository> = new Map<string, MagitRepository>();
 export const views: Map<string, DocumentView> = new Map<string, DocumentView>();
@@ -130,6 +131,7 @@ export function activate(context: ExtensionContext) {
   context.subscriptions.push(
     contentProvider,
     providerRegistrations,
+    registerDeltaDecorationListener(),
   );
 
   context.subscriptions.push(

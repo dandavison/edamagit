@@ -1,6 +1,7 @@
 import * as assert from 'assert';
 import { Uri } from 'vscode';
 import { collectHunkViews, groupDecorationsByStyle } from '../../utils/deltaWiring';
+import { getDocumentDeltaDecorations } from '../../utils/deltaDecorations';
 import { DecorationRange } from '../../utils/deltaHighlighter';
 import { HunkView } from '../../views/changes/hunkView';
 import { ChangeSectionView } from '../../views/changes/changesSectionView';
@@ -69,6 +70,39 @@ suite('Delta Wiring – view tree collection and style grouping', () => {
 
     assert.strictEqual(hunkViews.length, 0,
       'Folded ChangeViews should not yield HunkViews (their ranges do not correspond to document lines)');
+  });
+
+  test('full pipeline: unfolded hunks produce non-empty decoration groups', async () => {
+    const changes = [makeChange('src/pipeline.ts')];
+    const section = new ChangeSectionView(Section.Unstaged, changes);
+    for (const sub of section.subViews) {
+      if (sub instanceof ChangeView) {
+        sub.folded = false;
+      }
+    }
+    section.render(0);
+
+    const hunkViews = collectHunkViews(section);
+    assert.ok(hunkViews.length > 0, 'Should find hunks in unfolded ChangeViews');
+
+    const decorations = await getDocumentDeltaDecorations(hunkViews);
+    assert.ok(decorations.length > 0, 'Delta should produce decoration ranges');
+
+    const groups = groupDecorationsByStyle(decorations);
+    assert.ok(groups.length > 0, 'Should produce at least one style group');
+
+    const totalRanges = groups.reduce((sum, g) => sum + g.ranges.length, 0);
+    assert.ok(totalRanges > 0, 'Groups must contain ranges');
+
+    // Decoration lines must fall within the hunk ranges in the document
+    const minLine = Math.min(...hunkViews.map(hv => hv.range.start.line));
+    const maxLine = Math.max(...hunkViews.map(hv => hv.range.end.line));
+    for (const g of groups) {
+      for (const r of g.ranges) {
+        assert.ok(r.line >= minLine && r.line <= maxLine,
+          `Decoration line ${r.line} outside hunk range [${minLine}, ${maxLine}]`);
+      }
+    }
   });
 
   test('groupDecorationsByStyle groups by (foreground, background) pair', () => {
