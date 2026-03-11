@@ -64,7 +64,7 @@ export async function applyDeltaDecorations(
   for (const group of groups) {
     const decorationType = window.createTextEditorDecorationType({
       color: group.foreground,
-      backgroundColor: group.background,
+      backgroundColor: withAlpha(group.background, 'bb'),
     });
     const ranges = group.ranges.map(
       r => new Range(new Position(r.line, r.startChar), new Position(r.line, r.endChar)),
@@ -74,6 +74,13 @@ export async function applyDeltaDecorations(
   }
 
   return disposables;
+}
+
+function withAlpha(color: string | undefined, alpha: string): string | undefined {
+  if (!color) return undefined;
+  // #rrggbb → #rrggbbaa; already-alpha colors pass through
+  if (color.length === 7 && color[0] === '#') return color + alpha;
+  return color;
 }
 
 function disposeForUri(key: string): void {
