@@ -42,8 +42,9 @@ function spawnDelta(diff: string, filePath: string, options?: DeltaOptions): Pro
         '--max-line-distance', '0.6',
         '--true-color', 'always',
         '--syntax-theme', theme,
-        `--file-style=omit`,
-        `--hunk-header-style=plain`,
+        isLightSyntaxTheme(theme) ? '--light' : '--dark',
+        '--file-style=omit',
+        '--hunk-header-style=plain',
       ], { stdio: ['pipe', 'pipe', 'ignore'] });
     } catch {
       resolve(null);
@@ -95,4 +96,14 @@ function tokensToRanges(tokens: ParseToken[]): DecorationRange[] {
     }
   }
   return ranges;
+}
+
+// Mirrors delta's LIGHT_SYNTAX_THEMES + lowercase "light" heuristic.
+const LIGHT_SYNTAX_THEMES = new Set([
+  'Catppuccin Latte', 'GitHub', 'gruvbox-light', 'gruvbox-white',
+  'Monokai Extended Light', 'OneHalfLight', 'Solarized (light)',
+]);
+
+function isLightSyntaxTheme(theme: string): boolean {
+  return LIGHT_SYNTAX_THEMES.has(theme) || theme.toLowerCase().includes('light');
 }
