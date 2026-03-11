@@ -80,6 +80,41 @@ Run the existing test suite. The three tests exercise:
 
 No changes to the test file are needed.
 
+## Performance
+
+### Cost model
+
+The dominant cost is process spawn + delta execution (~50-200ms for a typical diff). ANSI parsing
+and span-to-range conversion are sub-millisecond (linear string walks). Everything else is noise.
+
+### Constraint: never block content rendering
+
+`provideTextDocumentContent()` must return immediately. Delta decorations are applied afterwards
+via `setDecorations()`. The user sees the diff instantly with basic TextMate coloring; delta's
+richer syntax colors appear shortly after. This is the same pattern as VS Code's semantic tokens
+(basic highlighting first, semantic override second). This constraint is architectural — the
+integration layer must respect it — but stating it here because it's the single most important
+performance property.
+
+### Design for cacheability
+
+Fold/unfold re-renders the entire document (every fold toggle → `view.render()` →
+`ContentProvider` fires). But individual hunks' diff text doesn't change — only their line
+offsets in the document shift. The function should therefore operate **per-hunk** with stable
+inputs, so the integration layer can cache results keyed by hunk diff text and only recompute
+line offsets on re-render. This avoids a 50-200ms delta spawn on every fold keystroke.
+
+The core function's signature (`diff: string → DecorationRange[]` with 0-based line numbers
+relative to the input) already supports this: the caller can offset line numbers when mapping
+to document positions.
+
+### Measurement
+
+Instrument from day one. Log `performance.now()` elapsed time for the delta spawn to the
+extension's output channel. This is cheap, always-on, and means we'll know immediately if
+delta is slow on large diffs rather than guessing. The test can also assert on timing if we
+find regressions later.
+
 ## What is NOT in scope
 
 - `package.json` settings (`magit.delta-enabled`, `magit.delta-path`)
