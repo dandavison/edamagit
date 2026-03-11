@@ -13,12 +13,20 @@ export interface DecorationGroup {
 
 export function collectHunkViews(view: View): HunkView[] {
   const result: HunkView[] = [];
-  for (const sub of view.walkAllSubViews()) {
+  walkVisible(view, result);
+  return result;
+}
+
+function walkVisible(view: View, out: HunkView[]): void {
+  for (const sub of view.subViews) {
     if (sub instanceof HunkView) {
-      result.push(sub);
+      if (!sub.folded) {
+        out.push(sub);
+      }
+    } else if (!sub.folded) {
+      walkVisible(sub, out);
     }
   }
-  return result;
 }
 
 export function groupDecorationsByStyle(decorations: DecorationRange[]): DecorationGroup[] {

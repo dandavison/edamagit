@@ -4,6 +4,7 @@ import { collectHunkViews, groupDecorationsByStyle } from '../../utils/deltaWiri
 import { DecorationRange } from '../../utils/deltaHighlighter';
 import { HunkView } from '../../views/changes/hunkView';
 import { ChangeSectionView } from '../../views/changes/changesSectionView';
+import { ChangeView } from '../../views/changes/changeView';
 import { Section } from '../../views/general/sectionHeader';
 import { MagitChange } from '../../models/magitChange';
 import { Status } from '../../typings/git';
@@ -35,9 +36,15 @@ function makeChange(path: string): MagitChange {
 
 suite('Delta Wiring – view tree collection and style grouping', () => {
 
-  test('collectHunkViews finds HunkViews nested in a ChangeSectionView', () => {
+  test('collectHunkViews finds HunkViews in unfolded ChangeViews', () => {
     const changes = [makeChange('src/app.ts'), makeChange('src/server.ts')];
     const section = new ChangeSectionView(Section.Unstaged, changes);
+    // Unfold each ChangeView so its hunks are visible in the document
+    for (const sub of section.subViews) {
+      if (sub instanceof ChangeView) {
+        sub.folded = false;
+      }
+    }
     section.render(0);
 
     const hunkViews = collectHunkViews(section);
@@ -50,6 +57,18 @@ suite('Delta Wiring – view tree collection and style grouping', () => {
         'HunkView range must be set after render',
       );
     }
+  });
+
+  test('collectHunkViews excludes HunkViews inside folded ChangeViews', () => {
+    const changes = [makeChange('src/folded1.ts'), makeChange('src/folded2.ts')];
+    const section = new ChangeSectionView(Section.Unstaged, changes);
+    // ChangeView.foldedByDefault = true; fresh URIs ensure no stale fold memory
+    section.render(0);
+
+    const hunkViews = collectHunkViews(section);
+
+    assert.strictEqual(hunkViews.length, 0,
+      'Folded ChangeViews should not yield HunkViews (their ranges do not correspond to document lines)');
   });
 
   test('groupDecorationsByStyle groups by (foreground, background) pair', () => {
