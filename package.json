@@ -7,7 +7,7 @@
   "author": {
     "name": "Kristian Andersen Hole"
   },
-  "version": "0.6.68",
+  "version": "0.6.70",
   "engines": {
     "vscode": "^1.50.0"
   },
@@ -473,6 +473,17 @@
           ],
           "default": "",
           "description": "Like `git.path`. Path and filename of the git executable, e.g. C:\\Program Files\\Git\\bin\\git.exe' (Windows). This can also be an array of string values containing multiple paths to look up."
+        },
+        "magit.use-diff-colorizer": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable diff colorization using an external command (see magit.diff-colorizer-command)."
+        },
+        "magit.diff-colorizer-command": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["delta", "--color-only", "--no-gitconfig", "--true-color", "always", "--dark"],
+          "description": "Command to colorize diffs, as [executable, ...args]. The command receives unified diff on stdin and must emit ANSI-colored output on stdout."
         }
       }
     },
@@ -804,6 +815,7 @@
   },
   "dependencies": {
     "@vscode/iconv-lite-umd": "^0.7.0",
+    "ansi-sequence-parser": "^1.1.3",
     "date-fns": "^2.16.1",
     "jsonc-parser": "^3.0.0",
     "which": "^3.0.0"
