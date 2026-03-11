@@ -1,15 +1,19 @@
-import { TextEditor, Range, Position, Disposable, window } from 'vscode';
+import { TextEditor, Range, Position, Disposable, window, Uri, workspace } from 'vscode';
 import { View } from '../views/general/view';
 import { HunkView } from '../views/changes/hunkView';
 import { DecorationRange } from './deltaHighlighter';
 import { DocumentView } from '../views/general/documentView';
 import { getDocumentDeltaDecorations } from './deltaDecorations';
+import { views } from '../extension';
+import * as Constants from '../common/constants';
 
 export interface DecorationGroup {
   foreground?: string;
   background?: string;
   ranges: { line: number; startChar: number; endChar: number }[];
 }
+
+const activeDecorations = new Map<string, Disposable[]>();
 
 export function collectHunkViews(view: View): HunkView[] {
   const result: HunkView[] = [];
@@ -70,4 +74,43 @@ export async function applyDeltaDecorations(
   }
 
   return disposables;
+}
+
+function disposeForUri(key: string): void {
+  const prev = activeDecorations.get(key);
+  if (prev) {
+    prev.forEach(d => d.dispose());
+    activeDecorations.delete(key);
+  }
+}
+
+export function refreshDeltaDecorations(uri: Uri): void {
+  const key = uri.toString();
+  const view = views.get(key);
+  const editor = window.visibleTextEditors.find(
+    ed => ed.document.uri.toString() === key,
+  );
+  if (!view || !editor) {
+    disposeForUri(key);
+    return;
+  }
+
+  disposeForUri(key);
+
+  applyDeltaDecorations(editor, view).then(
+    disposables => {
+      if (disposables.length > 0) {
+        activeDecorations.set(key, disposables);
+      }
+    },
+    err => console.error('[edamagit] delta decorations failed:', err),
+  );
+}
+
+export function registerDeltaDecorationListener(): Disposable {
+  return workspace.onDidChangeTextDocument(e => {
+    if (e.document.uri.scheme === Constants.MagitUriScheme) {
+      refreshDeltaDecorations(e.document.uri);
+    }
+  });
 }
