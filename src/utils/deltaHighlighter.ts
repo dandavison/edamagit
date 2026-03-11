@@ -23,17 +23,19 @@ export async function highlightDiffWithDelta(
   const stdout = await spawnDelta(diff, filePath, options);
   const elapsed = performance.now() - t0;
   if (stdout === null) {
-    return [];
+    return []; // delta not installed
   }
   console.log(`[edamagit] delta spawn: ${elapsed.toFixed(0)}ms`);
   const tokens = parseAnsiSequences(stdout);
   return tokensToRanges(tokens);
 }
 
+// Returns stdout on success, null if delta is not installed.
+// Throws on all other failures (non-zero exit, timeout).
 function spawnDelta(diff: string, filePath: string, options?: DeltaOptions): Promise<string | null> {
   const exe = options?.deltaExecutable ?? 'delta';
   const theme = options?.syntaxTheme ?? 'GitHub';
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     let proc: ChildProcess;
     try {
       proc = spawn(exe, [
@@ -43,22 +45,34 @@ function spawnDelta(diff: string, filePath: string, options?: DeltaOptions): Pro
         '--true-color', 'always',
         '--syntax-theme', theme,
         isLightSyntaxTheme(theme) ? '--light' : '--dark',
-      ], { stdio: ['pipe', 'pipe', 'ignore'] });
-    } catch {
+      ], { stdio: ['pipe', 'pipe', 'pipe'] });
+    } catch (err) {
       resolve(null);
       return;
     }
     const chunks: Buffer[] = [];
+    const stderrChunks: Buffer[] = [];
     proc.stdout!.on('data', (chunk: Buffer) => chunks.push(chunk));
-    proc.on('error', () => resolve(null));
-    proc.on('close', (code) => {
-      if (code !== 0) {
+    proc.stderr!.on('data', (chunk: Buffer) => stderrChunks.push(chunk));
+    proc.on('error', (err: NodeJS.ErrnoException) => {
+      if (err.code === 'ENOENT') {
         resolve(null);
       } else {
-        resolve(Buffer.concat(chunks).toString('utf-8'));
+        reject(new Error(`delta process error: ${err.message}`));
       }
     });
-    const timeout = setTimeout(() => { proc.kill(); resolve(null); }, 5000);
+    proc.on('close', (code) => {
+      if (code === 0) {
+        resolve(Buffer.concat(chunks).toString('utf-8'));
+      } else {
+        const stderr = Buffer.concat(stderrChunks).toString('utf-8').trim();
+        reject(new Error(`delta exited with code ${code}${stderr ? ': ' + stderr : ''}`));
+      }
+    });
+    const timeout = setTimeout(() => {
+      proc.kill();
+      reject(new Error(`delta timed out after 5000ms`));
+    }, 5000);
     proc.on('close', () => clearTimeout(timeout));
     proc.stdin!.end(diff);
   });
