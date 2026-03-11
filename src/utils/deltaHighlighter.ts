@@ -43,8 +43,6 @@ function spawnDelta(diff: string, filePath: string, options?: DeltaOptions): Pro
         '--true-color', 'always',
         '--syntax-theme', theme,
         isLightSyntaxTheme(theme) ? '--light' : '--dark',
-        '--file-style=omit',
-        '--hunk-header-style=plain',
       ], { stdio: ['pipe', 'pipe', 'ignore'] });
     } catch {
       resolve(null);
