@@ -7,7 +7,6 @@ import { SemanticTokenTypes } from '../common/constants';
 import GitTextUtils from './gitTextUtils';
 import { DocumentView } from '../views/general/documentView';
 import { magitConfig, views } from '../extension';
-import { refreshDeltaDecorations } from './deltaWiring';
 
 function hasUri(obj: unknown): obj is { uri: Uri } {
   return typeof obj === 'object' && obj !== null && 'uri' in obj && obj.uri instanceof Uri;
@@ -28,9 +27,7 @@ export default class ViewUtils {
   public static async showView(uri: Uri, view: DocumentView, textDocumentShowOptions: TextDocumentShowOptions = { preview: false, preserveFocus: false }) {
     views.set(uri.toString(), view);
     let doc = await workspace.openTextDocument(uri);
-    const editor = await window.showTextDocument(doc, { viewColumn: ViewUtils.showDocumentColumn(), ...textDocumentShowOptions });
-    refreshDeltaDecorations(uri);
-    return editor;
+    return window.showTextDocument(doc, { viewColumn: ViewUtils.showDocumentColumn(), ...textDocumentShowOptions });
   }
 
   public static showDocumentColumn(doc?: TextDocument): ViewColumn {
