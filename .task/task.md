@@ -1,11 +1,29 @@
-Currently, edamagit does not display diffs with syntax highlighting:
+## Task: Wire delta syntax highlighting into edamagit's diff display
 
-/var/folders/d2/hflhkhsd08v8nbjf3jf9yfdm0000gn/T/clipboard-1773222136247.png
+### Problem
 
- highlightDiffWithDelta is a standalone utility that the tests exercise, but no code path in the extension calls it. We just added it, so we can change it if necessary.
+edamagit displays diffs as plain text with no syntax highlighting. The utility
+`highlightDiffWithDelta` exists and produces `DecorationRange[]` from a diff
+string via the `delta` tool, but no code path in the extension calls it. Diffs
+in the status view (and diff views) are rendered through `HunkView` → `TextView`
+→ `ContentProvider` as uncolored text.
 
- The task is to modify edamagit to use this function to highlight diffs.
+### Goal
 
- Performance is key here. Human eyeballs are on every keystroke waiting for the GUI to be ready. Ensure that the plan is taking appropriate performance steps. This doesn't
-mean over-complicating for speculative and unproven wins. It means that if there is a low-hanging fruit with an obvious big win, we take it. Do we have a way to measure performance so that we're not guessing?
-Make a plan that an experienced JS/vscode engineer with a lot of performance and engineering wisdom would do?
+When a magit document containing diff hunks is displayed, apply delta-produced
+syntax-highlighting decorations to the editor. The decorations must be
+positioned correctly in document coordinate space (each hunk's DecorationRange
+line numbers are relative to the hunk; they must be offset to the hunk's
+position within the rendered document).
+
+### Constraints
+
+- **Performance**: delta is spawned per-diff (not per-hunk). Highlighting must
+  not block document rendering — decorations can be applied asynchronously after
+  the document text is ready. Batch all hunks for a single file into one delta
+  call where possible.
+- **Graceful degradation**: if delta is not installed, no decorations are
+  applied (no errors, no user-visible difference from today).
+- **Minimal change surface**: use `vscode.TextEditor.setDecorations()` with
+  decoration types created from delta's color output. Do not alter the existing
+  semantic tokens or TextMate grammar.
