@@ -9,6 +9,17 @@ The existing interfaces (`DecorationRange`, `DeltaOptions`) and function signatu
 defined as a stub. Integration into the VS Code extension (decorations, settings, editor hooks)
 is out of scope for this step — the goal is the core function that the existing test exercises.
 
+## Step 0: Add `ansi-sequence-parser` dependency
+
+```sh
+npm install ansi-sequence-parser
+```
+
+This library parses ANSI SGR sequences (including 24-bit true color) into typed spans:
+`{value, foreground, background, decorations}` where colors are discriminated unions
+(`NamedColor | TableColor | RgbColor`). It handles all the SGR complexity (compound sequences,
+resets, erase-line codes) so we don't have to.
+
 ## Step 1: Implement `highlightDiffWithDelta`
 
 **File:** `src/utils/deltaHighlighter.ts`
@@ -18,7 +29,7 @@ The function must:
 1. **Resolve the delta executable.** Use `options.deltaExecutable` if provided; otherwise default
    to `'delta'` (found via `PATH`).
 
-2. **Spawn delta** with `child_process.execFile` (promisified), passing the diff on stdin. Args:
+2. **Spawn delta** with `child_process.spawn`, passing the diff on stdin. Args:
    ```
    --color-only
    --no-gitconfig
@@ -32,38 +43,20 @@ The function must:
    `[]`. This satisfies the "nonexistent delta" test case. Use a try/catch around the spawn; do
    not let errors propagate.
 
-4. **Parse ANSI SGR sequences from stdout.** Delta produces 24-bit color via:
-   - `\x1b[38;2;R;G;Bm` — set foreground to RGB
-   - `\x1b[48;2;R;G;Bm` — set background to RGB
-   - `\x1b[0m` — reset all attributes
-   - `\x1b[0K` — erase to end of line (ignore, it's a terminal artifact)
-   - Compound sequences like `\x1b[48;2;R;G;B;38;2;R;G;Bm` (both in one escape)
+4. **Parse ANSI output using `ansi-sequence-parser`.** Call `parseAnsiSequences(stdout)` to get
+   an array of `ParsedSpan` objects, each with `.value` (visible text), `.foreground`, and
+   `.background` (typed color unions or null).
 
-   The parser walks stdout character by character, tracking:
-   - Current line number and character offset (within the visible/stripped text)
-   - Current active foreground and background colors
-   - Start position of the current color span
+5. **Convert spans to `DecorationRange[]`.** Walk the parsed spans, tracking current line and
+   character offset. For each span:
+   - Split `.value` on newlines (a span can contain newlines)
+   - For each segment, if the span has a foreground or background color, emit a `DecorationRange`
+     with the appropriate line/startChar/endChar and hex color string
+   - Advance character offset by segment length; on newline, increment line and reset offset
+   - Convert `RgbColor` to `#rrggbb`; for `NamedColor`/`TableColor`, map to a reasonable hex
+     value (or skip — delta with `--true-color always` should only produce RGB)
 
-   On each color change or newline, emit a `DecorationRange` for the span that just ended (if it
-   had any color). Convert RGB values to `#rrggbb` hex strings.
-
-5. **Return the array of `DecorationRange`** objects.
-
-### Implementation details
-
-The ANSI parser is the core complexity. Key design decisions:
-
-- **Single-pass streaming parser.** Walk the delta output string once. When `\x1b[` is
-  encountered, extract everything up to `m` (or `K`, which we skip). Parse the semicolon-delimited
-  parameters to extract `38;2;R;G;B` and `48;2;R;G;B` subsequences. `0` resets both colors.
-
-- **Character position tracking.** The `startChar` and `endChar` in `DecorationRange` refer to
-  positions in the *stripped* (ANSI-free) text. The parser must count only visible characters.
-
-- **Emit on color change.** When the active fg/bg changes, close the current span and open a new
-  one. When a newline is encountered, close the current span, increment line, reset char offset.
-
-- **Skip empty spans.** Don't emit a `DecorationRange` if `startChar === endChar`.
+6. **Return the array of `DecorationRange`** objects.
 
 ### Helper: `spawnDelta`
 
@@ -71,10 +64,11 @@ A small async helper that wraps `child_process.spawn`, writes stdin, collects st
 the output string. Returns `null` on any error (ENOENT, non-zero exit, timeout). Use a reasonable
 timeout (5 seconds).
 
-### Helper: `parseAnsiRanges`
+### Helper: `spansToRanges`
 
-A pure function `(ansiText: string) => DecorationRange[]` that implements the parser. This
-separation makes the parser independently testable and keeps `highlightDiffWithDelta` simple.
+A pure function `(spans: ParsedSpan[]) => DecorationRange[]` that walks the parsed spans and
+emits decoration ranges. This separation keeps `highlightDiffWithDelta` simple and makes the
+conversion logic independently testable if needed.
 
 ## Step 2: Verify
 
