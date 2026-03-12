@@ -501,6 +501,16 @@
           ],
           "default": "",
           "description": "Like `git.path`. Path and filename of the git executable, e.g. C:\\Program Files\\Git\\bin\\git.exe' (Windows). This can also be an array of string values containing multiple paths to look up."
+        },
+        "magit.delta-executable": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the delta executable for syntax-highlighted diffs. Defaults to 'delta' on PATH."
+        },
+        "magit.delta-syntax-theme": {
+          "type": "string",
+          "default": "",
+          "description": "Syntax theme for delta diff highlighting (e.g. 'Dracula', 'GitHub', 'Monokai Extended'). When set, also infers --light/--dark from the theme name. When empty, uses delta's default with --dark."
         }
       }
     },
