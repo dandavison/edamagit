@@ -1,4 +1,4 @@
-import { workspace, extensions, commands, ExtensionContext, Disposable, languages, window } from 'vscode';
+import { workspace, extensions, commands, ExtensionContext, Disposable, languages, window, Uri } from 'vscode';
 import ContentProvider from './providers/contentProvider';
 import { GitExtension, API } from './typings/git';
 import { pushing } from './commands/pushingCommands';
@@ -138,6 +138,18 @@ export function activate(context: ExtensionContext) {
     contentProvider,
     providerRegistrations,
     registerDeltaDecorationListener(),
+  );
+
+  context.subscriptions.push(
+    window.registerUriHandler({
+      handleUri(uri: Uri) {
+        const params = new URLSearchParams(uri.query);
+        const cmd = params.get('id');
+        if (cmd) {
+          commands.executeCommand(cmd);
+        }
+      }
+    })
   );
 
   context.subscriptions.push(
