@@ -39,7 +39,8 @@
   },
   "activationEvents": [
     "onCommand:magit.save-and-close-editor",
-    "onCommand:magit.clear-and-abort-editor"
+    "onCommand:magit.clear-and-abort-editor",
+    "onUri"
   ],
   "main": "./dist/extension",
   "contributes": {
