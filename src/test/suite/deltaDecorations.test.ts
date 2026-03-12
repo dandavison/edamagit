@@ -43,10 +43,12 @@ suite('Delta Decorations – view-level integration', () => {
 
     // All decoration lines must be in document coordinate space,
     // i.e. offset by the hunk's position in the document
+    const hunkLineCount = hunkText.split('\n').length;
+    const documentEndLine = documentStartLine + hunkLineCount - 1;
     for (const d of decorations) {
       assert.ok(
-        d.line >= documentStartLine,
-        `Decoration line ${d.line} should be >= document start line ${documentStartLine}`,
+        d.line >= documentStartLine && d.line <= documentEndLine,
+        `Decoration line ${d.line} should be in [${documentStartLine}, ${documentEndLine}]`,
       );
     }
 
