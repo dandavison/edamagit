@@ -1,9 +1,9 @@
 import { TextEditor, Range, Position, Disposable, window, Uri, workspace } from 'vscode';
 import { View } from '../views/general/view';
 import { HunkView } from '../views/changes/hunkView';
-import { DecorationRange } from './deltaHighlighter';
+import { DecorationRange } from './diffColorizer';
 import { DocumentView } from '../views/general/documentView';
-import { getDocumentDeltaDecorations } from './deltaDecorations';
+import { getDocumentDecorations } from './diffDecorations';
 import { magitConfig, views } from '../extension';
 import * as Constants from '../common/constants';
 
@@ -48,16 +48,16 @@ export function groupDecorationsByStyle(decorations: DecorationRange[]): Decorat
   return [...map.values()];
 }
 
-export async function applyDeltaDecorations(
+export async function applyDecorations(
   editor: TextEditor,
   view: DocumentView,
 ): Promise<Disposable[]> {
   const hunkViews = collectHunkViews(view);
   if (hunkViews.length === 0) return [];
 
-  const decorations = await getDocumentDeltaDecorations(hunkViews, {
-    deltaExecutable: magitConfig.deltaExecutable,
-    syntaxTheme: magitConfig.deltaSyntaxTheme,
+  const decorations = await getDocumentDecorations(hunkViews, {
+    executable: magitConfig.diffColorizer,
+    syntaxTheme: magitConfig.diffColorizerTheme,
   });
   if (decorations.length === 0) return [];
 
@@ -81,7 +81,6 @@ export async function applyDeltaDecorations(
 
 function withAlpha(color: string | undefined, alpha: string): string | undefined {
   if (!color) return undefined;
-  // #rrggbb → #rrggbbaa; already-alpha colors pass through
   if (color.length === 7 && color[0] === '#') return color + alpha;
   return color;
 }
@@ -94,7 +93,7 @@ function disposeForUri(key: string): void {
   }
 }
 
-export function refreshDeltaDecorations(uri: Uri): void {
+export function refreshDecorations(uri: Uri): void {
   const key = uri.toString();
   const view = views.get(key);
   const editor = window.visibleTextEditors.find(
@@ -107,20 +106,20 @@ export function refreshDeltaDecorations(uri: Uri): void {
 
   disposeForUri(key);
 
-  applyDeltaDecorations(editor, view).then(
+  applyDecorations(editor, view).then(
     disposables => {
       if (disposables.length > 0) {
         activeDecorations.set(key, disposables);
       }
     },
-    err => console.error('[edamagit] delta decorations failed:', err),
+    err => console.error('[edamagit] diff decorations failed:', err),
   );
 }
 
-export function registerDeltaDecorationListener(): Disposable {
+export function registerDecorationListener(): Disposable {
   return workspace.onDidChangeTextDocument(e => {
     if (e.document.uri.scheme === Constants.MagitUriScheme) {
-      refreshDeltaDecorations(e.document.uri);
+      refreshDecorations(e.document.uri);
     }
   });
 }

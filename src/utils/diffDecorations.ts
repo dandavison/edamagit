@@ -1,9 +1,9 @@
-import { DecorationRange, DeltaOptions, highlightDiffWithDelta } from './deltaHighlighter';
+import { DecorationRange, ColorizerOptions, colorizeDiff } from './diffColorizer';
 import { HunkView } from '../views/changes/hunkView';
 
-export async function getDocumentDeltaDecorations(
+export async function getDocumentDecorations(
   hunkViews: HunkView[],
-  options?: DeltaOptions,
+  options?: ColorizerOptions,
 ): Promise<DecorationRange[]> {
   if (hunkViews.length === 0) {
     return [];
@@ -28,7 +28,7 @@ export async function getDocumentDeltaDecorations(
 
 async function decorationsForFileGroup(
   group: HunkView[],
-  options?: DeltaOptions,
+  options?: ColorizerOptions,
 ): Promise<DecorationRange[]> {
   const { diffHeader, uri } = group[0].changeHunk;
 
@@ -36,21 +36,21 @@ async function decorationsForFileGroup(
   const fullDiff = headerNormalized + group.map(hv => hv.changeHunk.diff).join('\n');
 
   const headerLineCount = headerNormalized.split('\n').length - 1;
-  const mappings: { deltaStart: number; lineCount: number; docStart: number }[] = [];
+  const mappings: { colorizerStart: number; lineCount: number; docStart: number }[] = [];
   let cursor = headerLineCount;
   for (const hv of group) {
     const lineCount = hv.changeHunk.diff.split('\n').length;
-    mappings.push({ deltaStart: cursor, lineCount, docStart: hv.range.start.line });
+    mappings.push({ colorizerStart: cursor, lineCount, docStart: hv.range.start.line });
     cursor += lineCount;
   }
 
-  const raw = await highlightDiffWithDelta(fullDiff, uri.fsPath, options);
+  const raw = await colorizeDiff(fullDiff, uri.fsPath, options);
 
   const result: DecorationRange[] = [];
   for (const d of raw) {
     for (const m of mappings) {
-      if (d.line >= m.deltaStart && d.line < m.deltaStart + m.lineCount) {
-        result.push({ ...d, line: m.docStart + (d.line - m.deltaStart) });
+      if (d.line >= m.colorizerStart && d.line < m.colorizerStart + m.lineCount) {
+        result.push({ ...d, line: m.docStart + (d.line - m.colorizerStart) });
         break;
       }
     }

@@ -1,5 +1,6 @@
 import { ChildProcess, spawn } from 'child_process';
 import { parseAnsiSequences, createColorPalette, ParseToken } from 'ansi-sequence-parser';
+import { basename } from 'path';
 
 export interface DecorationRange {
   line: number;
@@ -9,30 +10,31 @@ export interface DecorationRange {
   background?: string;
 }
 
-export interface DeltaOptions {
-  deltaExecutable?: string;
+export interface ColorizerOptions {
+  executable?: string;
   syntaxTheme?: string;
 }
 
-export async function highlightDiffWithDelta(
+export async function colorizeDiff(
   diff: string,
   filePath: string,
-  options?: DeltaOptions,
+  options?: ColorizerOptions,
 ): Promise<DecorationRange[]> {
   const t0 = performance.now();
-  const stdout = await spawnDelta(diff, filePath, options);
+  const stdout = await spawnColorizer(diff, filePath, options);
   const elapsed = performance.now() - t0;
   if (stdout === null) {
     return [];
   }
-  console.log(`[edamagit] delta spawn: ${elapsed.toFixed(0)}ms`);
+  console.log(`[edamagit] diff colorizer spawn: ${elapsed.toFixed(0)}ms`);
   const tokens = parseAnsiSequences(stdout);
   return tokensToRanges(tokens);
 }
 
-function spawnDelta(diff: string, filePath: string, options?: DeltaOptions): Promise<string | null> {
-  const exe = options?.deltaExecutable ?? 'delta';
-  const theme = options?.syntaxTheme;
+function colorizerArgs(executable: string, theme?: string): string[] {
+  if (basename(executable) !== 'delta') {
+    return [];
+  }
   const args = [
     '--color-only',
     '--no-gitconfig',
@@ -41,10 +43,25 @@ function spawnDelta(diff: string, filePath: string, options?: DeltaOptions): Pro
   ];
   if (theme) {
     args.push('--syntax-theme', theme);
-    args.push(isLightSyntaxTheme(theme) ? '--light' : '--dark');
+    args.push(isDeltaLightTheme(theme) ? '--light' : '--dark');
   } else {
     args.push('--dark');
   }
+  return args;
+}
+
+const DELTA_LIGHT_THEMES = new Set([
+  'Catppuccin Latte', 'GitHub', 'gruvbox-light', 'gruvbox-white',
+  'Monokai Extended Light', 'OneHalfLight', 'Solarized (light)',
+]);
+
+function isDeltaLightTheme(theme: string): boolean {
+  return DELTA_LIGHT_THEMES.has(theme) || theme.toLowerCase().includes('light');
+}
+
+function spawnColorizer(diff: string, filePath: string, options?: ColorizerOptions): Promise<string | null> {
+  const exe = options?.executable ?? 'delta';
+  const args = colorizerArgs(exe, options?.syntaxTheme);
   return new Promise((resolve) => {
     let proc: ChildProcess;
     try {
@@ -99,14 +116,4 @@ function tokensToRanges(tokens: ParseToken[]): DecorationRange[] {
     }
   }
   return ranges;
-}
-
-// Mirrors delta's LIGHT_SYNTAX_THEMES + lowercase "light" heuristic.
-const LIGHT_SYNTAX_THEMES = new Set([
-  'Catppuccin Latte', 'GitHub', 'gruvbox-light', 'gruvbox-white',
-  'Monokai Extended Light', 'OneHalfLight', 'Solarized (light)',
-]);
-
-function isLightSyntaxTheme(theme: string): boolean {
-  return LIGHT_SYNTAX_THEMES.has(theme) || theme.toLowerCase().includes('light');
 }

@@ -7,7 +7,7 @@
   "author": {
     "name": "Kristian Andersen Hole"
   },
-  "version": "0.6.69",
+  "version": "0.6.70",
   "engines": {
     "vscode": "^1.50.0"
   },
@@ -503,15 +503,15 @@
           "default": "",
           "description": "Like `git.path`. Path and filename of the git executable, e.g. C:\\Program Files\\Git\\bin\\git.exe' (Windows). This can also be an array of string values containing multiple paths to look up."
         },
-        "magit.delta-executable": {
+        "magit.diff-colorizer": {
           "type": "string",
           "default": "",
-          "description": "Path to the delta executable for syntax-highlighted diffs. Defaults to 'delta' on PATH."
+          "description": "Path to a diff colorizer executable (e.g. 'delta') that reads unified diff on stdin and emits ANSI-colored output on stdout. Empty disables the feature."
         },
-        "magit.delta-syntax-theme": {
+        "magit.diff-colorizer-theme": {
           "type": "string",
           "default": "",
-          "description": "Syntax theme for delta diff highlighting (e.g. 'Dracula', 'GitHub', 'Monokai Extended'). When set, also infers --light/--dark from the theme name. When empty, uses delta's default with --dark."
+          "description": "Syntax theme passed to the diff colorizer (e.g. 'Dracula', 'GitHub', 'Monokai Extended'). For delta, also infers --light/--dark from the theme name."
         }
       }
     },

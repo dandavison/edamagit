@@ -1,8 +1,8 @@
 import * as assert from 'assert';
 import { Uri } from 'vscode';
-import { collectHunkViews, groupDecorationsByStyle } from '../../utils/deltaWiring';
-import { getDocumentDeltaDecorations } from '../../utils/deltaDecorations';
-import { DecorationRange } from '../../utils/deltaHighlighter';
+import { collectHunkViews, groupDecorationsByStyle } from '../../utils/diffWiring';
+import { getDocumentDecorations } from '../../utils/diffDecorations';
+import { DecorationRange } from '../../utils/diffColorizer';
 import { HunkView } from '../../views/changes/hunkView';
 import { ChangeSectionView } from '../../views/changes/changesSectionView';
 import { ChangeView } from '../../views/changes/changeView';
@@ -35,12 +35,11 @@ function makeChange(path: string): MagitChange {
   };
 }
 
-suite('Delta Wiring – view tree collection and style grouping', () => {
+suite('Diff Wiring – view tree collection and style grouping', () => {
 
   test('collectHunkViews finds HunkViews in unfolded ChangeViews', () => {
     const changes = [makeChange('src/app.ts'), makeChange('src/server.ts')];
     const section = new ChangeSectionView(Section.Unstaged, changes);
-    // Unfold each ChangeView so its hunks are visible in the document
     for (const sub of section.subViews) {
       if (sub instanceof ChangeView) {
         sub.folded = false;
@@ -63,7 +62,6 @@ suite('Delta Wiring – view tree collection and style grouping', () => {
   test('collectHunkViews excludes HunkViews inside folded ChangeViews', () => {
     const changes = [makeChange('src/folded1.ts'), makeChange('src/folded2.ts')];
     const section = new ChangeSectionView(Section.Unstaged, changes);
-    // ChangeView.foldedByDefault = true; fresh URIs ensure no stale fold memory
     section.render(0);
 
     const hunkViews = collectHunkViews(section);
@@ -85,18 +83,18 @@ suite('Delta Wiring – view tree collection and style grouping', () => {
     const hunkViews = collectHunkViews(section);
     assert.ok(hunkViews.length > 0, 'Should find hunks in unfolded ChangeViews');
 
-    const decorations = await getDocumentDeltaDecorations(hunkViews);
-    assert.ok(decorations.length > 0, 'Delta should produce decoration ranges');
+    const decorations = await getDocumentDecorations(hunkViews);
+    assert.ok(decorations.length > 0, 'Colorizer should produce decoration ranges');
 
     const groups = groupDecorationsByStyle(decorations);
     assert.ok(groups.length > 0, 'Should produce at least one style group');
 
-    const totalRanges = groups.reduce((sum, g) => sum + g.ranges.length, 0);
+    const totalRanges = groups.reduce((sum: number, g: { ranges: unknown[] }) => sum + g.ranges.length, 0);
     assert.ok(totalRanges > 0, 'Groups must contain ranges');
 
     // Decoration lines must fall within the hunk ranges in the document
-    const minLine = Math.min(...hunkViews.map(hv => hv.range.start.line));
-    const maxLine = Math.max(...hunkViews.map(hv => hv.range.end.line));
+    const minLine = Math.min(...hunkViews.map((hv: HunkView) => hv.range.start.line));
+    const maxLine = Math.max(...hunkViews.map((hv: HunkView) => hv.range.end.line));
     for (const g of groups) {
       for (const r of g.ranges) {
         assert.ok(r.line >= minLine && r.line <= maxLine,
@@ -116,23 +114,19 @@ suite('Delta Wiring – view tree collection and style grouping', () => {
 
     const groups = groupDecorationsByStyle(decorations);
 
-    // Decorations with no color at all should be excluded
     const withColor = decorations.filter(d => d.foreground || d.background);
-    const totalRanges = groups.reduce((sum, g) => sum + g.ranges.length, 0);
+    const totalRanges = groups.reduce((sum: number, g: { ranges: unknown[] }) => sum + g.ranges.length, 0);
     assert.strictEqual(totalRanges, withColor.length, 'Total ranges must equal colored input decorations');
 
-    // #ff0000 (no bg) should be one group with 2 ranges
-    const redGroup = groups.find(g => g.foreground === '#ff0000' && !g.background);
+    const redGroup = groups.find((g: { foreground?: string; background?: string }) => g.foreground === '#ff0000' && !g.background);
     assert.ok(redGroup, 'Expected a group for foreground=#ff0000');
     assert.strictEqual(redGroup!.ranges.length, 2);
 
-    // #ff0000 + #111111 bg should be a separate group
-    const redBgGroup = groups.find(g => g.foreground === '#ff0000' && g.background === '#111111');
+    const redBgGroup = groups.find((g: { foreground?: string; background?: string }) => g.foreground === '#ff0000' && g.background === '#111111');
     assert.ok(redBgGroup, 'Expected a separate group when background differs');
     assert.strictEqual(redBgGroup!.ranges.length, 1);
 
-    // #00ff00 should be its own group
-    const greenGroup = groups.find(g => g.foreground === '#00ff00');
+    const greenGroup = groups.find((g: { foreground?: string }) => g.foreground === '#00ff00');
     assert.ok(greenGroup, 'Expected a group for foreground=#00ff00');
     assert.strictEqual(greenGroup!.ranges.length, 1);
   });

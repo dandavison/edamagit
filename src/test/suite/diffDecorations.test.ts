@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { getDocumentDeltaDecorations } from '../../utils/deltaDecorations';
+import { getDocumentDecorations } from '../../utils/diffDecorations';
 import { HunkView } from '../../views/changes/hunkView';
 import { Section } from '../../views/general/sectionHeader';
 import { Uri } from 'vscode';
@@ -21,7 +21,7 @@ const hunkText = `@@ -10,7 +10,8 @@ import { createLogger } from './logger';
      logger.info('Server started');
    });`;
 
-suite('Delta Decorations – view-level integration', () => {
+suite('Diff Decorations – view-level integration', () => {
 
   test('extracts decorations in document coordinates from HunkViews', async () => {
     const uri = Uri.parse('file:///test/src/server.ts');
@@ -32,17 +32,14 @@ suite('Delta Decorations – view-level integration', () => {
     });
 
     // Simulate the hunk appearing at line 5 in the rendered document
-    // (as it would after status header, section header, file header, etc.)
     const documentStartLine = 5;
     hunkView.render(documentStartLine);
 
-    const decorations = await getDocumentDeltaDecorations([hunkView]);
+    const decorations = await getDocumentDecorations([hunkView]);
 
-    // delta should produce syntax-colored ranges for TypeScript code
-    assert.ok(decorations.length > 0, 'Expected decoration ranges from delta');
+    assert.ok(decorations.length > 0, 'Expected decoration ranges');
 
-    // All decoration lines must be in document coordinate space,
-    // i.e. offset by the hunk's position in the document
+    // All decoration lines must be in document coordinate space
     const hunkLineCount = hunkText.split('\n').length;
     const documentEndLine = documentStartLine + hunkLineCount - 1;
     for (const d of decorations) {
@@ -53,11 +50,11 @@ suite('Delta Decorations – view-level integration', () => {
     }
 
     // At least one range should have a foreground color (syntax highlight)
-    const hasColor = decorations.some(d => d.foreground !== undefined);
+    const hasColor = decorations.some((d: { foreground?: string }) => d.foreground !== undefined);
     assert.ok(hasColor, 'Expected at least one decoration with a foreground color');
   });
 
-  test('returns empty array when delta is unavailable', async () => {
+  test('returns empty array when colorizer is unavailable', async () => {
     const uri = Uri.parse('file:///test/src/server.ts');
     const hunkView = new HunkView(Section.Unstaged, {
       diff: hunkText,
@@ -66,8 +63,8 @@ suite('Delta Decorations – view-level integration', () => {
     });
     hunkView.render(0);
 
-    const decorations = await getDocumentDeltaDecorations([hunkView], {
-      deltaExecutable: '/nonexistent/delta',
+    const decorations = await getDocumentDecorations([hunkView], {
+      executable: '/nonexistent/delta',
     });
     assert.deepStrictEqual(decorations, []);
   });
