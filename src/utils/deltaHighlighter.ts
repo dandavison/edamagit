@@ -32,20 +32,23 @@ export async function highlightDiffWithDelta(
 
 function spawnDelta(diff: string, filePath: string, options?: DeltaOptions): Promise<string | null> {
   const exe = options?.deltaExecutable ?? 'delta';
-  const theme = options?.syntaxTheme ?? 'GitHub';
+  const theme = options?.syntaxTheme;
+  const args = [
+    '--color-only',
+    '--no-gitconfig',
+    '--max-line-distance', '0.6',
+    '--true-color', 'always',
+  ];
+  if (theme) {
+    args.push('--syntax-theme', theme);
+    args.push(isLightSyntaxTheme(theme) ? '--light' : '--dark');
+  } else {
+    args.push('--dark');
+  }
   return new Promise((resolve) => {
     let proc: ChildProcess;
     try {
-      proc = spawn(exe, [
-        '--color-only',
-        '--no-gitconfig',
-        '--max-line-distance', '0.6',
-        '--true-color', 'always',
-        '--syntax-theme', theme,
-        isLightSyntaxTheme(theme) ? '--light' : '--dark',
-        '--file-style=omit',
-        '--hunk-header-style=plain',
-      ], { stdio: ['pipe', 'pipe', 'ignore'] });
+      proc = spawn(exe, args, { stdio: ['pipe', 'pipe', 'ignore'] });
     } catch {
       resolve(null);
       return;
