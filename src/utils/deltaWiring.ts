@@ -4,7 +4,7 @@ import { HunkView } from '../views/changes/hunkView';
 import { DecorationRange } from './deltaHighlighter';
 import { DocumentView } from '../views/general/documentView';
 import { getDocumentDeltaDecorations } from './deltaDecorations';
-import { views } from '../extension';
+import { magitConfig, views } from '../extension';
 import * as Constants from '../common/constants';
 
 export interface DecorationGroup {
@@ -55,7 +55,10 @@ export async function applyDeltaDecorations(
   const hunkViews = collectHunkViews(view);
   if (hunkViews.length === 0) return [];
 
-  const decorations = await getDocumentDeltaDecorations(hunkViews);
+  const decorations = await getDocumentDeltaDecorations(hunkViews, {
+    deltaExecutable: magitConfig.deltaExecutable,
+    syntaxTheme: magitConfig.deltaSyntaxTheme,
+  });
   if (decorations.length === 0) return [];
 
   const groups = groupDecorationsByStyle(decorations);
