@@ -58,7 +58,7 @@ import { copyBufferRevisionCommands } from './commands/copyBufferRevisionCommand
 import { submodules } from './commands/submodulesCommands';
 import { forgeRefreshInterval } from './forge';
 import { bisecting } from './commands/bisectCommands';
-import { registerDeltaDecorationListener } from './utils/deltaWiring';
+import { registerDecorationListener } from './utils/diffWiring';
 import {
   setRebasePick, setRebaseReword, setRebaseEdit,
   setRebaseSquash, setRebaseFixup, setRebaseDrop, rebaseKillLine
@@ -70,7 +70,7 @@ export const processLog: MagitProcessLogEntry[] = [];
 
 export let gitApi: API;
 export let logPath: string;
-export let magitConfig: { displayBufferSameColumn?: boolean, forgeEnabled?: boolean, hiddenStatusSections: Set<string>, quickSwitchEnabled?: boolean, gitPath?: string, deltaExecutable?: string, deltaSyntaxTheme?: string };
+export let magitConfig: { displayBufferSameColumn?: boolean, forgeEnabled?: boolean, hiddenStatusSections: Set<string>, quickSwitchEnabled?: boolean, gitPath?: string, diffColorizer?: string, diffColorizerTheme?: string };
 
 function loadConfig() {
   let workspaceConfig = workspace.getConfiguration('magit');
@@ -81,8 +81,8 @@ function loadConfig() {
     hiddenStatusSections: readHiddenStatusSections(workspaceConfig.get('hide-status-sections')),
     quickSwitchEnabled: workspaceConfig.get('quick-switch-enabled'),
     gitPath: workspaceConfig.get('git-path'),
-    deltaExecutable: workspaceConfig.get('delta-executable') || undefined,
-    deltaSyntaxTheme: workspaceConfig.get('delta-syntax-theme') || undefined,
+    diffColorizer: workspaceConfig.get('diff-colorizer') || undefined,
+    diffColorizerTheme: workspaceConfig.get('diff-colorizer-theme') || undefined,
   };
 
   let configCodePath: string | undefined = workspaceConfig.get('code-path');
@@ -137,7 +137,7 @@ export function activate(context: ExtensionContext) {
   context.subscriptions.push(
     contentProvider,
     providerRegistrations,
-    registerDeltaDecorationListener(),
+    registerDecorationListener(),
   );
 
   context.subscriptions.push(

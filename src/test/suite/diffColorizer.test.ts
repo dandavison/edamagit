@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { highlightDiffWithDelta, DecorationRange } from '../../utils/deltaHighlighter';
+import { colorizeDiff, DecorationRange } from '../../utils/diffColorizer';
 
 const sampleDiff = `diff --git a/src/server.ts b/src/server.ts
 index 1a2b3c4..5d6e7f8 100644
@@ -17,28 +17,28 @@ index 1a2b3c4..5d6e7f8 100644
    });
 `;
 
-suite('Delta Highlighter', () => {
+suite('Diff Colorizer', () => {
 
   test('produces decoration ranges with syntax colors for a TypeScript diff', async () => {
-    const ranges: DecorationRange[] = await highlightDiffWithDelta(sampleDiff, 'src/server.ts');
+    const ranges: DecorationRange[] = await colorizeDiff(sampleDiff, 'src/server.ts');
 
-    assert.ok(ranges.length > 0, 'Expected at least one decoration range from delta');
+    assert.ok(ranges.length > 0, 'Expected at least one decoration range');
 
     const hasColor = ranges.some(r => r.foreground !== undefined || r.background !== undefined);
     assert.ok(hasColor, 'Expected at least one range with a foreground or background color');
   });
 
   test('preserves diff structure (line count unchanged)', async () => {
-    const ranges: DecorationRange[] = await highlightDiffWithDelta(sampleDiff, 'src/server.ts');
+    const ranges: DecorationRange[] = await colorizeDiff(sampleDiff, 'src/server.ts');
 
     const maxLine = Math.max(...ranges.map(r => r.line));
     const inputLines = sampleDiff.split('\n').length - 1; // trailing newline
     assert.ok(maxLine < inputLines, 'Decoration line numbers must be within diff bounds');
   });
 
-  test('returns empty array when delta is not installed', async () => {
-    const ranges = await highlightDiffWithDelta(sampleDiff, 'src/server.ts', {
-      deltaExecutable: '/nonexistent/delta'
+  test('returns empty array when colorizer is not installed', async () => {
+    const ranges = await colorizeDiff(sampleDiff, 'src/server.ts', {
+      executable: '/nonexistent/delta'
     });
     assert.deepStrictEqual(ranges, [], 'Should gracefully return empty array');
   });
