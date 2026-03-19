@@ -10,9 +10,7 @@ import { Section } from '../views/general/sectionHeader';
 import * as path from 'path';
 import FilePathUtils from '../utils/filePathUtils';
 import * as fs from 'fs';
-import ViewUtils from '../utils/viewUtils';
 import GitTextUtils from '../utils/gitTextUtils';
-import { magitConfig } from '../extension';
 
 const commitMenu = {
   title: 'Committing',
@@ -188,14 +186,11 @@ export async function runCommitLikeCommand(repository: MagitRepository, args: st
 
     const stagedEditor = await stagedEditorTask;
     if (stagedEditor) {
-      for (const visibleEditor of vscode.window.visibleTextEditors) {
-        if (visibleEditor.document.uri === stagedEditor.document.uri) {
-          // This is a bit of a hack. Too bad about editor.hide() and editor.show() being deprecated.
-          const stagedEditorViewColumn = ViewUtils.showDocumentColumn();
-          await vscode.window.showTextDocument(stagedEditor.document, { viewColumn: stagedEditorViewColumn, preview: false });
-          await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
-          if (!magitConfig.displayBufferSameColumn) {
-            vscode.commands.executeCommand(`workbench.action.navigate${stagedEditorViewColumn === vscode.ViewColumn.One ? 'Right' : 'Left'}`);
+      const targetUri = stagedEditor.document.uri.toString();
+      for (const tabGroup of vscode.window.tabGroups.all) {
+        for (const tab of tabGroup.tabs) {
+          if (tab.input instanceof vscode.TabInputText && tab.input.uri.toString() === targetUri) {
+            await vscode.window.tabGroups.close(tab);
           }
         }
       }
