@@ -14,6 +14,7 @@ export interface DecorationGroup {
 }
 
 const activeDecorations = new Map<string, Disposable[]>();
+const refreshGeneration = new Map<string, number>();
 
 export function collectHunkViews(view: View): HunkView[] {
   const result: HunkView[] = [];
@@ -106,8 +107,15 @@ export function refreshDecorations(uri: Uri): void {
 
   disposeForUri(key);
 
+  const gen = (refreshGeneration.get(key) ?? 0) + 1;
+  refreshGeneration.set(key, gen);
+
   applyDecorations(editor, view).then(
     disposables => {
+      if (refreshGeneration.get(key) !== gen) {
+        disposables.forEach(d => d.dispose());
+        return;
+      }
       if (disposables.length > 0) {
         activeDecorations.set(key, disposables);
       }
