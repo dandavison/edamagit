@@ -53,13 +53,12 @@ export async function applyDecorations(
   editor: TextEditor,
   view: DocumentView,
 ): Promise<Disposable[]> {
+  if (!magitConfig.useDiffColorizer || magitConfig.diffColorizerCommand.length === 0) return [];
+
   const hunkViews = collectHunkViews(view);
   if (hunkViews.length === 0) return [];
 
-  const decorations = await getDocumentDecorations(hunkViews, {
-    executable: magitConfig.diffColorizer,
-    syntaxTheme: magitConfig.diffColorizerTheme,
-  });
+  const decorations = await getDocumentDecorations(hunkViews, magitConfig.diffColorizerCommand);
   if (decorations.length === 0) return [];
 
   const groups = groupDecorationsByStyle(decorations);

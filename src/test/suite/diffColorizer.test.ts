@@ -20,7 +20,7 @@ index 1a2b3c4..5d6e7f8 100644
 suite('Diff Colorizer', () => {
 
   test('produces decoration ranges with syntax colors for a TypeScript diff', async () => {
-    const ranges: DecorationRange[] = await colorizeDiff(sampleDiff, 'src/server.ts');
+    const ranges: DecorationRange[] = await colorizeDiff(sampleDiff, 'src/server.ts', ['delta', '--color-only', '--no-gitconfig', '--dark']);
 
     assert.ok(ranges.length > 0, 'Expected at least one decoration range');
 
@@ -29,7 +29,7 @@ suite('Diff Colorizer', () => {
   });
 
   test('preserves diff structure (line count unchanged)', async () => {
-    const ranges: DecorationRange[] = await colorizeDiff(sampleDiff, 'src/server.ts');
+    const ranges: DecorationRange[] = await colorizeDiff(sampleDiff, 'src/server.ts', ['delta', '--color-only', '--no-gitconfig', '--dark']);
 
     const maxLine = Math.max(...ranges.map(r => r.line));
     const inputLines = sampleDiff.split('\n').length - 1; // trailing newline
@@ -37,9 +37,7 @@ suite('Diff Colorizer', () => {
   });
 
   test('returns empty array when colorizer is not installed', async () => {
-    const ranges = await colorizeDiff(sampleDiff, 'src/server.ts', {
-      executable: '/nonexistent/delta'
-    });
+    const ranges = await colorizeDiff(sampleDiff, 'src/server.ts', ['/nonexistent/delta']);
     assert.deepStrictEqual(ranges, [], 'Should gracefully return empty array');
   });
 });

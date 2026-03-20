@@ -70,7 +70,7 @@ export const processLog: MagitProcessLogEntry[] = [];
 
 export let gitApi: API;
 export let logPath: string;
-export let magitConfig: { displayBufferSameColumn?: boolean, forgeEnabled?: boolean, hiddenStatusSections: Set<string>, quickSwitchEnabled?: boolean, gitPath?: string, diffColorizer?: string, diffColorizerTheme?: string };
+export let magitConfig: { displayBufferSameColumn?: boolean, forgeEnabled?: boolean, hiddenStatusSections: Set<string>, quickSwitchEnabled?: boolean, gitPath?: string, useDiffColorizer: boolean, diffColorizerCommand: string[] };
 
 function loadConfig() {
   let workspaceConfig = workspace.getConfiguration('magit');
@@ -81,8 +81,8 @@ function loadConfig() {
     hiddenStatusSections: readHiddenStatusSections(workspaceConfig.get('hide-status-sections')),
     quickSwitchEnabled: workspaceConfig.get('quick-switch-enabled'),
     gitPath: workspaceConfig.get('git-path'),
-    diffColorizer: workspaceConfig.get('diff-colorizer') || undefined,
-    diffColorizerTheme: workspaceConfig.get('diff-colorizer-theme') || undefined,
+    useDiffColorizer: workspaceConfig.get<boolean>('use-diff-colorizer') ?? false,
+    diffColorizerCommand: workspaceConfig.get<string[]>('diff-colorizer-command') ?? [],
   };
 
   let configCodePath: string | undefined = workspaceConfig.get('code-path');

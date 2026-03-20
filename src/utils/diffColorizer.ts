@@ -1,6 +1,5 @@
 import { ChildProcess, spawn } from 'child_process';
 import { parseAnsiSequences, createColorPalette, ParseToken } from 'ansi-sequence-parser';
-import { basename } from 'path';
 
 export interface DecorationRange {
   line: number;
@@ -10,18 +9,13 @@ export interface DecorationRange {
   background?: string;
 }
 
-export interface ColorizerOptions {
-  executable?: string;
-  syntaxTheme?: string;
-}
-
 export async function colorizeDiff(
   diff: string,
   filePath: string,
-  options?: ColorizerOptions,
+  command: string[],
 ): Promise<DecorationRange[]> {
   const t0 = performance.now();
-  const stdout = await spawnColorizer(diff, filePath, options);
+  const stdout = await spawnColorizer(diff, filePath, command);
   const elapsed = performance.now() - t0;
   if (stdout === null) {
     return [];
@@ -31,41 +25,11 @@ export async function colorizeDiff(
   return tokensToRanges(tokens);
 }
 
-function colorizerArgs(executable: string, theme?: string): string[] {
-  if (basename(executable) !== 'delta') {
-    return [];
-  }
-  const args = [
-    '--color-only',
-    '--no-gitconfig',
-    '--max-line-distance', '0.6',
-    '--true-color', 'always',
-  ];
-  if (theme) {
-    args.push('--syntax-theme', theme);
-    args.push(isDeltaLightTheme(theme) ? '--light' : '--dark');
-  } else {
-    args.push('--dark');
-  }
-  return args;
-}
-
-const DELTA_LIGHT_THEMES = new Set([
-  'Catppuccin Latte', 'GitHub', 'gruvbox-light', 'gruvbox-white',
-  'Monokai Extended Light', 'OneHalfLight', 'Solarized (light)',
-]);
-
-function isDeltaLightTheme(theme: string): boolean {
-  return DELTA_LIGHT_THEMES.has(theme) || theme.toLowerCase().includes('light');
-}
-
-function spawnColorizer(diff: string, filePath: string, options?: ColorizerOptions): Promise<string | null> {
-  const exe = options?.executable ?? 'delta';
-  const args = colorizerArgs(exe, options?.syntaxTheme);
+function spawnColorizer(diff: string, _filePath: string, command: string[]): Promise<string | null> {
   return new Promise((resolve) => {
     let proc: ChildProcess;
     try {
-      proc = spawn(exe, args, { stdio: ['pipe', 'pipe', 'ignore'] });
+      proc = spawn(command[0], command.slice(1), { stdio: ['pipe', 'pipe', 'ignore'] });
     } catch {
       resolve(null);
       return;
