@@ -1,9 +1,9 @@
-import { DecorationRange, ColorizerOptions, colorizeDiff } from './diffColorizer';
+import { DecorationRange, colorizeDiff } from './diffColorizer';
 import { HunkView } from '../views/changes/hunkView';
 
 export async function getDocumentDecorations(
   hunkViews: HunkView[],
-  options?: ColorizerOptions,
+  command: string[],
 ): Promise<DecorationRange[]> {
   if (hunkViews.length === 0) {
     return [];
@@ -21,14 +21,14 @@ export async function getDocumentDecorations(
   }
 
   const results = await Promise.all(
-    [...byFile.values()].map(group => decorationsForFileGroup(group, options)),
+    [...byFile.values()].map(group => decorationsForFileGroup(group, command)),
   );
   return results.flat();
 }
 
 async function decorationsForFileGroup(
   group: HunkView[],
-  options?: ColorizerOptions,
+  command: string[],
 ): Promise<DecorationRange[]> {
   const { diffHeader, uri } = group[0].changeHunk;
 
@@ -44,7 +44,7 @@ async function decorationsForFileGroup(
     cursor += lineCount;
   }
 
-  const raw = await colorizeDiff(fullDiff, uri.fsPath, options);
+  const raw = await colorizeDiff(fullDiff, uri.fsPath, command);
 
   const result: DecorationRange[] = [];
   for (const d of raw) {

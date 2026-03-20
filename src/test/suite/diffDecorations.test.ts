@@ -35,7 +35,7 @@ suite('Diff Decorations – view-level integration', () => {
     const documentStartLine = 5;
     hunkView.render(documentStartLine);
 
-    const decorations = await getDocumentDecorations([hunkView]);
+    const decorations = await getDocumentDecorations([hunkView], ['delta', '--color-only', '--no-gitconfig', '--dark']);
 
     assert.ok(decorations.length > 0, 'Expected decoration ranges');
 
@@ -63,9 +63,7 @@ suite('Diff Decorations – view-level integration', () => {
     });
     hunkView.render(0);
 
-    const decorations = await getDocumentDecorations([hunkView], {
-      executable: '/nonexistent/delta',
-    });
+    const decorations = await getDocumentDecorations([hunkView], ['/nonexistent/delta']);
     assert.deepStrictEqual(decorations, []);
   });
 });

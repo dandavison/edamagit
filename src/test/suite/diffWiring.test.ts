@@ -83,7 +83,7 @@ suite('Diff Wiring – view tree collection and style grouping', () => {
     const hunkViews = collectHunkViews(section);
     assert.ok(hunkViews.length > 0, 'Should find hunks in unfolded ChangeViews');
 
-    const decorations = await getDocumentDecorations(hunkViews);
+    const decorations = await getDocumentDecorations(hunkViews, ['delta', '--color-only', '--no-gitconfig', '--dark']);
     assert.ok(decorations.length > 0, 'Colorizer should produce decoration ranges');
 
     const groups = groupDecorationsByStyle(decorations);
