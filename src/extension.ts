@@ -58,6 +58,10 @@ import { copyBufferRevisionCommands } from './commands/copyBufferRevisionCommand
 import { submodules } from './commands/submodulesCommands';
 import { forgeRefreshInterval } from './forge';
 import { bisecting } from './commands/bisectCommands';
+import {
+  setRebasePick, setRebaseReword, setRebaseEdit,
+  setRebaseSquash, setRebaseFixup, setRebaseDrop, rebaseKillLine
+} from './commands/rebaseInteractiveCommands';
 import { registerDecorationListener } from './utils/diffWiring';
 
 export const magitRepositories: Map<string, MagitRepository> = new Map<string, MagitRepository>();
@@ -205,7 +209,15 @@ export function activate(context: ExtensionContext) {
     commands.registerTextEditorCommand('magit.copy-section-value', CommandPrimer.primeRepoAndView(copySectionValueCommand)),
     commands.registerTextEditorCommand('magit.copy-buffer-revision', CommandPrimer.primeRepoAndView(copyBufferRevisionCommands)),
 
-    commands.registerTextEditorCommand('magit.bisect', CommandPrimer.primeRepoAndView(bisecting))
+    commands.registerTextEditorCommand('magit.bisect', CommandPrimer.primeRepoAndView(bisecting)),
+
+    commands.registerTextEditorCommand('magit.rebase-set-pick', setRebasePick),
+    commands.registerTextEditorCommand('magit.rebase-set-reword', setRebaseReword),
+    commands.registerTextEditorCommand('magit.rebase-set-edit', setRebaseEdit),
+    commands.registerTextEditorCommand('magit.rebase-set-squash', setRebaseSquash),
+    commands.registerTextEditorCommand('magit.rebase-set-fixup', setRebaseFixup),
+    commands.registerTextEditorCommand('magit.rebase-set-drop', setRebaseDrop),
+    commands.registerTextEditorCommand('magit.rebase-kill-line', rebaseKillLine),
   );
 
   context.subscriptions.push(commands.registerTextEditorCommand('magit.toggle-fold', CommandPrimer.primeRepoAndView(async (repo: MagitRepository, view: DocumentView) => {
