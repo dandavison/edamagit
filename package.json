@@ -219,34 +219,6 @@
       {
         "command": "magit.bisect",
         "title": "Magit Bisect"
-      },
-      {
-        "command": "magit.rebase-set-pick",
-        "title": "Magit Rebase: Set Pick"
-      },
-      {
-        "command": "magit.rebase-set-reword",
-        "title": "Magit Rebase: Set Reword"
-      },
-      {
-        "command": "magit.rebase-set-edit",
-        "title": "Magit Rebase: Set Edit"
-      },
-      {
-        "command": "magit.rebase-set-squash",
-        "title": "Magit Rebase: Set Squash"
-      },
-      {
-        "command": "magit.rebase-set-fixup",
-        "title": "Magit Rebase: Set Fixup"
-      },
-      {
-        "command": "magit.rebase-set-drop",
-        "title": "Magit Rebase: Set Drop"
-      },
-      {
-        "command": "magit.rebase-kill-line",
-        "title": "Magit Rebase: Kill Line"
       }
     ],
     "menus": {
@@ -797,41 +769,6 @@
       {
         "command": "magit.clear-and-abort-editor",
         "key": "ctrl+c ctrl+k",
-        "when": "editorTextFocus && editorLangId == git-rebase"
-      },
-      {
-        "command": "magit.rebase-set-pick",
-        "key": "p",
-        "when": "editorTextFocus && editorLangId == git-rebase"
-      },
-      {
-        "command": "magit.rebase-set-reword",
-        "key": "r",
-        "when": "editorTextFocus && editorLangId == git-rebase"
-      },
-      {
-        "command": "magit.rebase-set-edit",
-        "key": "e",
-        "when": "editorTextFocus && editorLangId == git-rebase"
-      },
-      {
-        "command": "magit.rebase-set-squash",
-        "key": "s",
-        "when": "editorTextFocus && editorLangId == git-rebase"
-      },
-      {
-        "command": "magit.rebase-set-fixup",
-        "key": "f",
-        "when": "editorTextFocus && editorLangId == git-rebase"
-      },
-      {
-        "command": "magit.rebase-set-drop",
-        "key": "d",
-        "when": "editorTextFocus && editorLangId == git-rebase"
-      },
-      {
-        "command": "magit.rebase-kill-line",
-        "key": "k",
         "when": "editorTextFocus && editorLangId == git-rebase"
       },
       {
