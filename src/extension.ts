@@ -58,7 +58,6 @@ import { copyBufferRevisionCommands } from './commands/copyBufferRevisionCommand
 import { submodules } from './commands/submodulesCommands';
 import { forgeRefreshInterval } from './forge';
 import { bisecting } from './commands/bisectCommands';
-import { registerDecorationListener } from './utils/diffWiring';
 
 export const magitRepositories: Map<string, MagitRepository> = new Map<string, MagitRepository>();
 export const views: Map<string, DocumentView> = new Map<string, DocumentView>();
@@ -66,7 +65,7 @@ export const processLog: MagitProcessLogEntry[] = [];
 
 export let gitApi: API;
 export let logPath: string;
-export let magitConfig: { displayBufferSameColumn?: boolean, forgeEnabled?: boolean, hiddenStatusSections: Set<string>, quickSwitchEnabled?: boolean, gitPath?: string, useDiffColorizer: boolean, diffColorizerCommand: string[] };
+export let magitConfig: { displayBufferSameColumn?: boolean, forgeEnabled?: boolean, hiddenStatusSections: Set<string>, quickSwitchEnabled?: boolean, gitPath?: string };
 
 function loadConfig() {
   let workspaceConfig = workspace.getConfiguration('magit');
@@ -76,9 +75,7 @@ function loadConfig() {
     forgeEnabled: workspaceConfig.get('forge-enabled'),
     hiddenStatusSections: readHiddenStatusSections(workspaceConfig.get('hide-status-sections')),
     quickSwitchEnabled: workspaceConfig.get('quick-switch-enabled'),
-    gitPath: workspaceConfig.get('git-path'),
-    useDiffColorizer: workspaceConfig.get<boolean>('use-diff-colorizer') ?? false,
-    diffColorizerCommand: workspaceConfig.get<string[]>('diff-colorizer-command') ?? [],
+    gitPath: workspaceConfig.get('git-path')
   };
 
   let configCodePath: string | undefined = workspaceConfig.get('code-path');
@@ -133,7 +130,6 @@ export function activate(context: ExtensionContext) {
   context.subscriptions.push(
     contentProvider,
     providerRegistrations,
-    registerDecorationListener(),
   );
 
   context.subscriptions.push(
@@ -185,7 +181,7 @@ export function activate(context: ExtensionContext) {
     commands.registerTextEditorCommand('magit.copy-section-value', CommandPrimer.primeRepoAndView(copySectionValueCommand)),
     commands.registerTextEditorCommand('magit.copy-buffer-revision', CommandPrimer.primeRepoAndView(copyBufferRevisionCommands)),
 
-    commands.registerTextEditorCommand('magit.bisect', CommandPrimer.primeRepoAndView(bisecting)),
+    commands.registerTextEditorCommand('magit.bisect', CommandPrimer.primeRepoAndView(bisecting))
   );
 
   context.subscriptions.push(commands.registerTextEditorCommand('magit.toggle-fold', CommandPrimer.primeRepoAndView(async (repo: MagitRepository, view: DocumentView) => {
