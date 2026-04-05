@@ -14,28 +14,43 @@ function replaceAction(line: string, newAction: string): string {
   return leadingWs + newAction + trimmed.substring(firstWord.length);
 }
 
+function selectedLines(editor: TextEditor): number[] {
+  const lines = new Set<number>();
+  for (const sel of editor.selections) {
+    for (let i = sel.start.line; i <= sel.end.line; i++) {
+      lines.add(i);
+    }
+  }
+  return [...lines].sort((a, b) => a - b);
+}
+
 function makeSetAction(action: string) {
   return async (editor: TextEditor) => {
-    const line = editor.selection.active.line;
-    const lineText = editor.document.lineAt(line).text;
-    const replaced = replaceAction(lineText, action);
-    if (replaced !== lineText) {
-      await editor.edit(eb => {
-        eb.replace(editor.document.lineAt(line).range, replaced);
-      });
-    }
-    moveToNextLine(editor);
+    const lines = selectedLines(editor);
+    await editor.edit(eb => {
+      for (const line of lines) {
+        const lineText = editor.document.lineAt(line).text;
+        const replaced = replaceAction(lineText, action);
+        if (replaced !== lineText) {
+          eb.replace(editor.document.lineAt(line).range, replaced);
+        }
+      }
+    });
+    const lastLine = lines[lines.length - 1];
+    movePastLine(editor, lastLine);
   };
 }
 
 async function killLine(editor: TextEditor) {
-  const line = editor.selection.active.line;
-  const range = editor.document.lineAt(line).rangeIncludingLineBreak;
-  await editor.edit(eb => eb.delete(range));
+  const lines = selectedLines(editor);
+  await editor.edit(eb => {
+    for (const line of [...lines].reverse()) {
+      eb.delete(editor.document.lineAt(line).rangeIncludingLineBreak);
+    }
+  });
 }
 
-function moveToNextLine(editor: TextEditor): void {
-  const line = editor.selection.active.line;
+function movePastLine(editor: TextEditor, line: number): void {
   if (line < editor.document.lineCount - 1) {
     const pos = new Position(line + 1, 0);
     editor.selection = new Selection(pos, pos);
