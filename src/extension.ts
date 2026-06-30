@@ -1,4 +1,4 @@
-import { workspace, extensions, commands, ExtensionContext, Disposable, languages, window, Uri } from 'vscode';
+import { workspace, extensions, commands, ExtensionContext, Disposable, languages, window, Uri, ViewColumn } from 'vscode';
 import ContentProvider from './providers/contentProvider';
 import { GitExtension, API } from './typings/git';
 import { pushing } from './commands/pushingCommands';
@@ -70,6 +70,10 @@ export const processLog: MagitProcessLogEntry[] = [];
 
 export let gitApi: API;
 export let logPath: string;
+
+// The editor that was focused before a Magit view was shown. Used by `q` to
+// restore the user's previous editor instead of leaving an empty group.
+export let lastActiveNonMagitEditor: { uri: Uri, viewColumn?: ViewColumn } | undefined;
 export let magitConfig: {
   displayBufferSameColumn?: boolean,
   forgeEnabled?: boolean,
@@ -146,6 +150,11 @@ export function activate(context: ExtensionContext) {
     contentProvider,
     providerRegistrations,
     registerDecorationListener(),
+    window.onDidChangeActiveTextEditor(editor => {
+      if (editor && editor.document.uri.scheme !== Constants.MagitUriScheme) {
+        lastActiveNonMagitEditor = { uri: editor.document.uri, viewColumn: editor.viewColumn };
+      }
+    }),
   );
 
   context.subscriptions.push(

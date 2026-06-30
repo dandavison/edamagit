@@ -1,4 +1,5 @@
-import { commands, TextEditor, Range, window, Selection, TextEditorRevealType, Position } from 'vscode';
+import { commands, TextEditor, Range, window, Selection, TextEditorRevealType, Position, workspace, ViewColumn, Tab } from 'vscode';
+import { lastActiveNonMagitEditor } from '../extension';
 import { MagitRepository } from '../models/magitRepository';
 import { ChangeSectionView } from '../views/changes/changesSectionView';
 import { ChangeView } from '../views/changes/changeView';
@@ -20,7 +21,19 @@ export async function clearSaveClose(editor: TextEditor) {
 
 // workaround for issue #11
 export async function quitMagitView() {
-  return commands.executeCommand('workbench.action.closeActiveEditor');
+  const wouldEmptyWorkbench = isLoneEditorGroup(window.tabGroups.all);
+  await commands.executeCommand('workbench.action.closeActiveEditor');
+  if (wouldEmptyWorkbench && lastActiveNonMagitEditor) {
+    const doc = await workspace.openTextDocument(lastActiveNonMagitEditor.uri);
+    await window.showTextDocument(doc, { viewColumn: lastActiveNonMagitEditor.viewColumn ?? ViewColumn.One, preview: false });
+  }
+}
+
+// Closing the active editor empties the workbench only when its group is the
+// sole non-empty group and holds just that one tab.
+export function isLoneEditorGroup(groups: readonly { tabs: readonly Tab[] }[]): boolean {
+  const groupsWithTabs = groups.filter(g => g.tabs.length > 0);
+  return groupsWithTabs.length === 1 && groupsWithTabs[0].tabs.length === 1;
 }
 
 export async function toggleAllFoldsInChangeSection(repo: MagitRepository, view: DocumentView) {
